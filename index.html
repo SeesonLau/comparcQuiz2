@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assembly Language Fundamentals Quiz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f9;
+        }
+        .quiz-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .question-card {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+            padding: 1.5rem;
+            border-radius: 12px;
+            transition: transform 0.2s;
+        }
+        .quiz-type-button {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            transition: all 0.2s;
+            cursor: pointer;
+            margin: 0 0.25rem;
+        }
+        .quiz-type-button.active {
+            background-color: #4f46e5;
+            color: white;
+            box-shadow: 0 4px 10px rgba(79, 70, 229, 0.4);
+        }
+        .quiz-type-button:not(.active):hover {
+            background-color: #eef2ff;
+            color: #4f46e5;
+        }
+        .correct-answer {
+            background-color: #d1fae5; /* Green 100 */
+            border-color: #10b981; /* Green 500 */
+        }
+        .incorrect-answer {
+            background-color: #fee2e2; /* Red 100 */
+            border-color: #ef4444; /* Red 500 */
+        }
+        /* Removed .fill-in-box since it's now radio buttons */
+        .fill-in-container {
+            font-family: monospace;
+            white-space: pre-wrap;
+            background-color: #f4f4f5;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid #d4d4d8;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <div id="quiz-app" class="quiz-container">
+        <!-- Header and Navigation -->
+        <header class="text-center py-6 bg-white shadow-lg rounded-xl mb-8">
+            <h1 class="text-3xl font-extrabold text-indigo-700">Assembly Language Fundamentals Quiz</h1>
+            <p class="mt-2 text-gray-600">Test your knowledge on MASM concepts from the provided introduction.</p>
+
+            <!-- Quiz Type Selector -->
+            <div id="quiz-selector" class="mt-6 flex flex-wrap justify-center gap-2">
+                <!-- Buttons will be populated by JavaScript -->
+            </div>
+        </header>
+
+        <!-- Quiz Content Area -->
+        <div id="quiz-content" class="space-y-6">
+            <div class="text-center py-10 text-gray-500">
+                <p class="text-xl">Please select a quiz format from the options above to begin!</p>
+            </div>
+        </div>
+
+        <!-- Score/Results Modal (Custom implementation, no alert()) -->
+        <div id="result-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden items-center justify-center z-50">
+            <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full transform transition-all scale-100 opacity-100">
+                <h2 id="modal-title" class="text-3xl font-bold mb-4 text-center text-indigo-700">Quiz Results</h2>
+                <p id="modal-score" class="text-5xl font-extrabold text-center mb-6 text-green-600"></p>
+                <div class="flex justify-center">
+                    <button onclick="closeModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-full transition duration-150 shadow-md">
+                        Great Job!
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state for Firebase (not used in this single-player quiz, but kept for context)
+        // const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        // const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        // const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // --- QUIZ DATA ---
+        const QUIZ_DATA = {
+            'Identification': [
+                { q: "What is the directive used to define a 32-bit unsigned integer in MASM?", a: "DWORD" },
+                { q: "What operator provides the linear address of a variable within the FLAT memory model?", a: "OFFSET" },
+                { q: "What is the directive that assigns an alternate name and type to a memory location without allocating storage?", a: "LABEL" },
+                { q: "What file extension is used for the source code file in the Assemble-Link-Debug cycle?", a: ".asm" },
+                { q: "What directive is used to set aside storage for a single 8-bit signed integer?", a: "SBYTE" },
+                { q: "What kind of constant must have a leading '0' if it begins with a letter (e.g., FF3Ah)?", a: "Hexadecimal" },
+                { q: "What directive is used to define an area in memory for the program data?", a: ".DATA" },
+                { q: "What instruction is used to unconditionally transfer program execution to a labeled instruction?", a: "JMP" },
+                { q: "What is the size, in bytes, of a single element declared with the REAL8 directive?", a: "8" },
+                { q: "What operator counts the number of elements in a single data declaration?", a: "LENGTHOF" },
+                { q: "What directive is used to define a runtime stack for the program?", a: ".STACK" },
+                { q: "What character signifies the end of a single-line comment in Assembly?", a: ";" },
+                { q: "The DUP operator may be used to allocate space for an array or a ___.", a: "String" },
+                { q: "Which directive specifies the memory configuration, such as FLAT?", a: ".MODEL" },
+                { q: "What operator is equivalent to multiplying LENGTHOF by TYPE?", a: "SIZEOF" },
+                { q: "What is the radix character for binary constants?", a: "b" },
+                { q: "Which type of statement in Assembly Language generates machine code for the processor to execute at runtime?", a: "Executable Instruction" },
+                { q: "What character sequence represents a carriage return in a string definition (e.g., in a menu)?", a: "0Dh" },
+                { q: "What directive is used before the .MODEL directive to specify the minimum processor architecture (e.g., Pentium P6)?", a: ".686" },
+                { q: "What is the term for a name used in the program that is processed by the assembler purely for text substitution and does NOT allocate memory?", a: "Symbolic Constant" }
+            ],
+            'Multiple Choices': [
+                {
+                    q: "Which of the following data definitions sets aside storage for a 16-bit signed integer?",
+                    options: ["BYTE", "DWORD", "REAL4", "SWORD"],
+                    a: "SWORD"
+                },
+                {
+                    q: "In Little Endian byte ordering, where is the memory address pointing?",
+                    options: ["Address of the most significant byte", "Address of the least significant byte", "Start of the code segment", "End of the data segment"],
+                    a: "Address of the least significant byte"
+                },
+                {
+                    q: "Which directive allows for its name to be redefined at any time?",
+                    options: ["EQU", "=", "TEXTEQU", ".MODEL"],
+                    a: "TEXTEQU"
+                },
+                {
+                    q: "The instruction mnemonic 'JMP' stands for:",
+                    options: ["Join Memory Pointer", "Jump if Minus Pointer", "Jump", "Just Move Page"],
+                    a: "Jump"
+                },
+                {
+                    q: "What is the decimal equivalent of the string termination character (NULL)?",
+                    options: ["13", "0", "10", "255"],
+                    a: "0"
+                },
+                {
+                    q: "The .MODEL FLAT directive specifies a:",
+                    options: ["Segmented 16-bit address space", "Large memory model with far calls", "Linear 32-bit address space (no segmentation)", "Real-mode memory model"],
+                    a: "Linear 32-bit address space (no segmentation)"
+                },
+                {
+                    q: "Which of the following is an example of an instruction with zero operands?",
+                    options: ["inc eax", "add ebx, ecx", "stc", "call Clrscr"],
+                    a: "stc"
+                },
+                {
+                    q: "The linker (LINK32.exe) is responsible for combining object (.obj) files with:",
+                    options: [".asm files", ".lst files", ".map files", "link library (.lib) files"],
+                    a: "link library (.lib) files"
+                },
+                {
+                    q: "A character constant must be enclosed in:",
+                    options: ["Parentheses ( )", "Square brackets [ ]", "Single or double quotes", "Angled brackets < >"],
+                    a: "Single or double quotes"
+                },
+                {
+                    q: "What is the size in bytes of a single element declared with the REAL10 directive (IEEE extended-precision)?",
+                    options: ["4", "8", "10", "16"],
+                    a: "10"
+                },
+                {
+                    q: "The PTR operator is primarily used to:",
+                    options: ["Perform pointer arithmetic", "Define a new data type", "Override the default type of a variable", "Specify a memory segment"],
+                    a: "Override the default type of a variable"
+                },
+                {
+                    q: "Which of these is an example of an Assembler Directive?",
+                    options: ["MOV", "ADD", "CALL", ".DATA"],
+                    a: ".DATA"
+                },
+                {
+                    q: "The ALIGN directive, with a bound of 4, ensures the variable's address is a multiple of:",
+                    options: ["1 byte", "2 bytes", "4 bytes", "16 bytes"],
+                    a: "4 bytes"
+                },
+                {
+                    q: "Which processor directive allows the program to use instructions of the Pentium P6 architecture?",
+                    options: [".386", ".486", ".686", ".P6"],
+                    a: ".686"
+                },
+                {
+                    q: "If an integer constant is written as '777o', what radix is specified?",
+                    options: ["Decimal", "Binary", "Hexadecimal", "Octal"],
+                    a: "Octal"
+                },
+                {
+                    q: "Which of these data types occupies 80 bits?",
+                    options: ["QWORD", "DWORD", "TBYTE", "REAL10"],
+                    a: "TBYTE"
+                },
+                {
+                    q: "Which file is an output of the assembler (ML.exe) that shows the object and source code?",
+                    options: [".exe file", ".map file", ".lst file", ".lib file"],
+                    a: ".lst file"
+                },
+                {
+                    q: "The instruction label must always end with what character?",
+                    options: [":", ";", ",", "."],
+                    a: ":"
+                },
+                {
+                    q: "Which of the following definitions uses a nested DUP operator?",
+                    options: ["var1 BYTE 20 DUP (0)", "var2 BYTE 10, 3 DUP(0)", "var3 BYTE 2 DUP(5 DUP('*'), 5 DUP('!'))", "var4 BYTE 4 DUP(\"STACK\")"],
+                    a: "var3 BYTE 2 DUP(5 DUP('*'), 5 DUP('!'))"
+                },
+                {
+                    q: "The EQU directive prevents the symbolic constant from being:",
+                    options: ["Used as an operand", "Redefined", "Used in the .DATA section", "Used as a label"],
+                    a: "Redefined"
+                }
+            ],
+            'Valid or Invalid': [
+                { q: "mov eax, [var1]", a: true, hint: "Assuming var1 is a valid memory variable, this is a valid move operation." },
+                { q: "CALL .DATA", a: false, hint: "CALL is an instruction, but .DATA is a non-executable directive and cannot be called." },
+                { q: "add ebx, 20h, ecx", a: false, hint: "The ADD instruction usually takes two operands, not three." },
+                { q: "JMP label1:", a: false, hint: "The instruction JMP does not include the colon in the operand." },
+                { q: "value BYTE -10", a: true, hint: "MASM allows initializing a BYTE with a negative value, although it's poor style." },
+                { q: "myConst = 'Hello'", a: false, hint: "The '=' directive requires an integer constant expression, not a string." },
+                { q: "mov ecx, TYPE var1", a: true, hint: "The TYPE operator returns the size in bytes of a single element, which can be moved to a register." },
+                { q: "0FFFh", a: true, hint: "A hexadecimal beginning with a letter must have a leading 0. This one starts with a digit, so it's valid." },
+                { q: "FFh", a: false, hint: "A hexadecimal beginning with a letter (F) must have a leading 0 to be valid." },
+                { q: "add var1, 25", a: true, hint: "A common instruction example: memory variable = variable + constant." },
+                { q: "myText TEXTEQU <mov eax, 10>", a: true, hint: "TEXTEQU can assign any text to a name, creating a text macro." },
+                { q: "mov al, WORD PTR dval", a: false, hint: "The destination register 'al' is a byte (8-bit), but the source is a WORD PTR (16-bit). This causes a size mismatch error." },
+                { q: "label: mnemonic operand ;comment", a: true, hint: "This is the correct general format for an Assembly instruction line." },
+                { q: "var1 QWORD ?", a: true, hint: "QWORD is a valid data directive for 64-bit integers." },
+                { q: "LENGTHOF myVar", a: true, hint: "LENGTHOF is a valid operator to count elements." },
+                { q: "END", a: false, hint: "The END directive must identify the name of the program's startup procedure, e.g., END main." },
+                { q: "imul eax, ebx, 5", a: true, hint: "IMUL instruction can take three operands: destination, source1, source2." },
+                { q: "byteVar BYTE 'ABC'", a: false, hint: "A single BYTE can only hold one character ('A'), not a string ('ABC'), unless it is an array." },
+                { q: ".CODE", a: true, hint: "The .CODE directive is used to define the code section of a program." },
+                { q: "mov esi, OFFSET 00404000h", a: false, hint: "OFFSET is for variables, not absolute addresses; use 'mov esi, 00404000h'." }
+            ],
+            'Programming': [
+                {
+                    q: "Which instruction fills the blank to set the carry flag?",
+                    code: "[___]",
+                    a: "stc",
+                    options: ["stc", "clc", "inc eax", "add ebx, 1"]
+                },
+                {
+                    q: "Which mnemonic fills the blank to set register EAX equal to EBX multiplied by 5?",
+                    code: "[___] eax, ebx, 5",
+                    a: "imul",
+                    options: ["add", "mul", "imul", "sub"]
+                },
+                {
+                    q: "Which operator fills the blank to move the address of the variable `bVal` into the ESI register?",
+                    code: "mov esi, [___] bVal",
+                    a: "OFFSET",
+                    options: ["PTR", "TYPE", "LENGTHOF", "OFFSET"]
+                },
+                {
+                    q: "Which symbol fills the blank to define an array of 20 uninitialized bytes?",
+                    code: "var2 BYTE 20 DUP([___])",
+                    a: "?",
+                    options: ["0", "1", "$", "?"]
+                },
+                {
+                    q: "Which directive fills the blank to define a symbolic constant `SIZE` equal to $10 * 10$ using the non-redefinable directive?",
+                    code: "SIZE [___] $10 * 10$",
+                    a: "EQU",
+                    options: ["=", "TEXTEQU", "LABEL", "EQU"]
+                },
+                {
+                    q: "Which value fills the blank to initialize a 32-bit unsigned integer with the largest possible value?",
+                    code: "dword1 DWORD [___]h",
+                    a: "Offffffff",
+                    options: ["7FFFFFFF", "FFFFFFFF", "Offffffff", "FFFF"]
+                },
+                {
+                    q: "Which mnemonic fills the blank to increment the value in the EAX register?",
+                    code: "[___] eax",
+                    a: "inc",
+                    options: ["dec", "add", "inc", "mov"]
+                },
+                {
+                    q: "Which directive fills the blank to define an area in memory for program data?",
+                    code: "[___]",
+                    a: ".DATA",
+                    options: [".CODE", ".STACK", ".DATA", ".MODEL"]
+                },
+                {
+                    q: "Which instruction fills the blank for the directive that terminates a program's execution?",
+                    code: "[___]",
+                    a: "exit",
+                    options: ["end", "ret", "exit", "halt"]
+                },
+                {
+                    q: "Which directive fills the blank to include code from the `Irvine32.inc` file?",
+                    code: "[___] Irvine32.inc",
+                    a: "INCLUDE",
+                    options: ["INSERT", "INCLUDE", "IMPORT", "LINK"]
+                },
+                {
+                    q: "Which radix character fills the blank to signify a decimal constant?",
+                    code: "42[___]",
+                    a: "d",
+                    options: ["b", "h", "o", "d"]
+                },
+                {
+                    q: "Which directive fills the blank to specify a program can use instructions of the Pentium P6 architecture?",
+                    code: "[___]",
+                    a: ".686",
+                    options: [".386", ".686", ".P6", ".MODEL"]
+                },
+                {
+                    q: "Which value fills the blank for the character sequence that represents a line feed (used after carriage return)?",
+                    code: "0Dh, [___]",
+                    a: "0Ah",
+                    options: ["0Bh", "0Ch", "0Ah", "0Eh"]
+                },
+                {
+                    q: "Which directive fills the blank to define a word variable `wVal` using the LABEL directive?",
+                    code: "wval [___] WORD\nblist BYTE 00h,10h, 00h, 20h",
+                    a: "LABEL",
+                    options: ["WORD", "LABEL", "PTR", "DUP"]
+                },
+                {
+                    q: "Which value fills the blank to define a string terminated with a NULL character?",
+                    code: "str1 BYTE \"Enter your name\", [___]",
+                    a: "0",
+                    options: ["0Dh", "0Ah", "0", "NULL"]
+                },
+                {
+                    q: "Which value fills the blank to use the DUP operator to define 20 bytes, all initialized to zero?",
+                    code: "var1 BYTE 20 DUP([___])",
+                    a: "0",
+                    options: ["?", "0", "00h", "1"]
+                },
+                {
+                    q: "Which directive fills the blank to align the next variable in memory to a multiple of 4 bytes?",
+                    code: "[___] 4",
+                    a: "ALIGN",
+                    options: ["ALIGN", "OFFSET", "PTR", "SIZE"]
+                },
+                {
+                    q: "Which operator fills the blank to calculate the total number of bytes in `array1` (Length x Type)?",
+                    code: "mov ecx, [___] array1",
+                    a: "SIZEOF",
+                    options: ["TYPE", "LENGTHOF", "SIZEOF", "OFFSET"]
+                },
+                {
+                    q: "Which directive fills the blank to define a symbolic constant `COUNT` using the redefinable directive?",
+                    code: "COUNT [___] 500\n...\nCOUNT = 600",
+                    a: "=",
+                    options: ["EQU", "=", "TEXTEQU", "CONST"]
+                },
+                {
+                    q: "Which type specifier fills the blank to override the default type of a 32-bit variable `dval` to access its least significant byte?",
+                    code: "mov al, [___] PTR dval",
+                    a: "BYTE",
+                    options: ["WORD", "DWORD", "BYTE", "TBYTE"]
+                }
+            ],
+            'True or False': [
+                { q: "MASM is case sensitive, meaning 'MOV' is different from 'mov'.", a: false },
+                { q: "Assembler Directives are non-executable; they are not part of the instruction set.", a: true },
+                { q: "An instruction label is optional and is used to mark the address of an instruction.", a: true },
+                { q: "The OFFSET operator returns the address of a variable relative to the start of the entire memory space (linear address) in the FLAT model.", a: true },
+                { q: "The .686 directive must be used AFTER the .MODEL directive.", a: false },
+                { q: "The BYTE directive is used to set aside storage for a 16-bit unsigned integer.", a: false },
+                { q: "The Equal-Sign (=) directive allows its symbolic constant to be redefined later in the program.", a: true },
+                { q: "In Big Endian byte ordering, the memory address is the address of the least significant byte.", a: false },
+                { q: "The linker (LINK32.exe) produces the executable (.exe) file.", a: true },
+                { q: "The TEXTEQU directive creates an integer constant expression that cannot be redefined.",
+                    a: false
+                },
+                { q: "The DUP operator may be nested to create complex data structures.", a: true },
+                { q: "The default radix for an integer constant is hexadecimal if no radix is specified.", a: false },
+                { q: "The SIZEOF operator is equivalent to multiplying LENGTHOF by TYPE.", a: true },
+                { q: "Every instruction in Assembly Language must have at least one operand.", a: false },
+                { q: "The PROC and ENDP directives are used to define procedures.", a: true },
+                { q: "The assembler (ML.exe) translates the .obj file into the executable (.exe) file.", a: false },
+                { q: "The standard end-of-line character sequence in strings is 0Ah (Line Feed) followed by 0Dh (Carriage Return).", a: false },
+                { q: "The LABEL directive allocates storage and assigns an alternate name to that storage location.", a: false },
+                { q: "The `exit` instruction is typically used to terminate the `main PROC` in the flat memory program template.", a: true },
+                { q: "The COMMENT directive is used for multi-line comments and requires a chosen character to begin and end the block.", a: true }
+            ]
+        };
+
+        let currentQuizType = null;
+        let userAnswers = {}; // { 'questionIndex': 'userSelection' }
+        let currentQuizData = [];
+
+        // --- UTILITY FUNCTIONS ---
+
+        /**
+         * Closes the results modal.
+         */
+        function closeModal() {
+            document.getElementById('result-modal').classList.add('hidden');
+            document.getElementById('result-modal').classList.remove('flex');
+        }
+
+        /**
+         * Renders the navigation buttons for selecting the quiz type.
+         */
+        function renderQuizSelector() {
+            const selectorDiv = document.getElementById('quiz-selector');
+            selectorDiv.innerHTML = '';
+
+            Object.keys(QUIZ_DATA).forEach(type => {
+                const button = document.createElement('button');
+                button.className = `quiz-type-button ${currentQuizType === type ? 'active' : 'bg-gray-200 text-gray-700 hover:bg-indigo-50'}`;
+                button.textContent = type;
+                button.onclick = () => loadQuiz(type);
+                selectorDiv.appendChild(button);
+            });
+        }
+
+        /**
+         * Loads and renders the selected quiz type.
+         * @param {string} type - The key for the quiz type (e.g., 'Multiple Choices').
+         */
+        function loadQuiz(type) {
+            currentQuizType = type;
+            currentQuizData = QUIZ_DATA[type];
+            userAnswers = {}; // Reset answers for the new quiz
+            renderQuizSelector();
+            renderQuizContent();
+        }
+
+        /**
+         * Renders the questions and input fields for the current quiz type.
+         */
+        function renderQuizContent() {
+            const contentDiv = document.getElementById('quiz-content');
+            contentDiv.innerHTML = ''; // Clear previous content
+
+            const title = document.createElement('h2');
+            title.className = 'text-2xl font-bold text-gray-800 mb-6 border-b pb-2';
+            title.textContent = `${currentQuizType} Quiz (${currentQuizData.length} Questions)`;
+            contentDiv.appendChild(title);
+
+            currentQuizData.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.id = `q-${index}`;
+                card.className = 'question-card mb-4';
+
+                // Question Text
+                const qText = document.createElement('p');
+                qText.className = 'text-lg font-semibold mb-3 text-gray-700';
+                qText.innerHTML = `${index + 1}. ${item.q}`; // Use innerHTML for fill-in to process text
+
+                card.appendChild(qText);
+
+                // --- Answer Input Rendering ---
+                const answerArea = document.createElement('div');
+
+                if (currentQuizType === 'Multiple Choices' || currentQuizType === 'Programming') {
+                    // --- Programming Quiz Code Context Display (if applicable) ---
+                    if (currentQuizType === 'Programming') {
+                         const codeContainer = document.createElement('div');
+                         codeContainer.className = 'fill-in-container';
+                         // Replace the blank marker with a visually distinct placeholder
+                         codeContainer.innerHTML = item.code.replace('[___]', '<span class="text-red-600 font-bold">[BLANK]</span>');
+                         answerArea.appendChild(codeContainer);
+                    }
+
+                    // --- Multiple Choice Options Rendering ---
+                    item.options.forEach(option => {
+                        const optionDiv = document.createElement('div');
+                        optionDiv.className = 'flex items-center mb-2 p-3 rounded-lg border border-gray-200 cursor-pointer transition-colors hover:bg-indigo-50/50';
+                        optionDiv.onclick = () => handleAnswer(index, option);
+
+                        const input = document.createElement('input');
+                        input.type = 'radio';
+                        input.name = `mcq-${index}`;
+                        input.value = option;
+                        input.className = 'w-5 h-5 text-indigo-600 bg-gray-100 border-gray-300 focus:ring-indigo-500';
+                        input.checked = userAnswers[index] === option;
+                        input.onchange = () => handleAnswer(index, option);
+
+                        const label = document.createElement('label');
+                        label.textContent = option;
+                        // Use monospace font for Programming options
+                        label.className = `ms-2 text-md font-medium text-gray-900 ${currentQuizType === 'Programming' ? 'font-mono' : ''}`;
+                        label.setAttribute('for', `mcq-${index}-${option}`);
+
+                        optionDiv.appendChild(input);
+                        optionDiv.appendChild(label);
+                        answerArea.appendChild(optionDiv);
+                    });
+                } else if (currentQuizType === 'True or False' || currentQuizType === 'Valid or Invalid') {
+                    const options = [
+                        { label: 'True', value: 'true' },
+                        { label: 'False', value: 'false' }
+                    ];
+                    if (currentQuizType === 'Valid or Invalid') {
+                        options[0].label = 'Valid';
+                        options[0].value = 'true';
+                        options[1].label = 'Invalid';
+                        options[1].value = 'false';
+                    }
+
+                    options.forEach(option => {
+                        const optionValue = option.value;
+                        const isChecked = userAnswers[index] === optionValue;
+                        const optionDiv = document.createElement('button');
+                        optionDiv.type = 'button';
+                        optionDiv.className = `w-1/2 p-3 text-center rounded-lg border-2 text-lg font-medium transition-all ${isChecked ? 'bg-indigo-100 border-indigo-500 text-indigo-700' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-indigo-50'}`;
+                        optionDiv.textContent = option.label;
+                        optionDiv.onclick = () => handleAnswer(index, optionValue);
+                        answerArea.appendChild(optionDiv);
+                    });
+                    answerArea.className = 'flex gap-4';
+
+                } else if (currentQuizType === 'Identification') {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.placeholder = 'Type your answer here...';
+                    input.className = 'w-full p-3 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors';
+                    input.value = userAnswers[index] || '';
+                    input.oninput = (e) => handleAnswer(index, e.target.value);
+                    answerArea.appendChild(input);
+
+                }
+
+                card.appendChild(answerArea);
+                contentDiv.appendChild(card);
+            });
+
+            // --- Control Buttons Container ---
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'flex gap-4 mt-6';
+
+            // Submit Button
+            const submitButton = document.createElement('button');
+            submitButton.textContent = 'Submit Quiz';
+            submitButton.className = 'w-1/2 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl transition duration-150 shadow-lg shadow-green-500/50';
+            submitButton.onclick = handleSubmit;
+            buttonContainer.appendChild(submitButton);
+
+            // Show Answers Button
+            const showAnswersButton = document.createElement('button');
+            showAnswersButton.textContent = 'Show All Answers';
+            showAnswersButton.className = 'w-1/2 bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-xl transition duration-150 shadow-lg shadow-gray-500/50';
+            showAnswersButton.onclick = () => handleSubmit(true); // Pass flag to show all answers
+            buttonContainer.appendChild(showAnswersButton);
+            
+            contentDiv.appendChild(buttonContainer);
+        }
+
+        /**
+         * Stores the user's answer for a question.
+         * @param {number} index - Question index.
+         * @param {string} answer - User's selected/typed answer.
+         */
+        function handleAnswer(index, answer) {
+            userAnswers[index] = answer;
+            // For all selection types, re-render to update selection visual state immediately
+            if (currentQuizType !== 'Identification') {
+                // Rerender only if the user hasn't submitted yet (or is not in 'Show Answers' mode)
+                // For simplicity, we only re-render to reflect the button state change
+                const questionElement = document.getElementById(`q-${index}`);
+                if (questionElement && !questionElement.classList.contains('correct-answer') && !questionElement.classList.contains('incorrect-answer')) {
+                     renderQuizContent();
+                }
+            }
+        }
+
+        /**
+         * Calculates the score and shows results.
+         * @param {boolean} showAll - If true, treats all answers as incorrect to force showing correct answers.
+         */
+        function handleSubmit(showAll = false) {
+            let correctCount = 0;
+
+            currentQuizData.forEach((item, index) => {
+                const userAnswer = userAnswers[index] ? userAnswers[index].trim().toLowerCase() : '';
+                let correctAnswer = '';
+
+                // Normalize correct answer
+                if (typeof item.a === 'boolean') {
+                    correctAnswer = item.a.toString();
+                } else if (typeof item.a === 'string') {
+                    correctAnswer = item.a.trim().toLowerCase();
+                }
+
+                const questionElement = document.getElementById(`q-${index}`);
+                if (!questionElement) return;
+
+                // Remove previous validation classes
+                questionElement.classList.remove('correct-answer', 'incorrect-answer');
+
+                // Check answer
+                const isCorrect = userAnswer === correctAnswer;
+                
+                // Determine if we should show a result color
+                const shouldValidate = !showAll && userAnswer !== '';
+                const shouldShowCorrect = showAll || (!isCorrect && userAnswer !== '');
+                
+                if (!showAll && isCorrect) {
+                    correctCount++;
+                    questionElement.classList.add('correct-answer');
+                } else if (shouldValidate) {
+                    questionElement.classList.add('incorrect-answer');
+                }
+                
+                // Append or update the correct answer/feedback
+                let feedbackDiv = questionElement.querySelector('.feedback');
+                if (feedbackDiv) feedbackDiv.remove();
+
+                feedbackDiv = document.createElement('div');
+                feedbackDiv.className = 'feedback mt-3 pt-3 border-t border-gray-200 text-sm';
+
+                if (isCorrect && !showAll) {
+                    feedbackDiv.innerHTML = `<span class="font-bold text-green-600">Correct!</span>`;
+                } else if (shouldShowCorrect) {
+                    // Show correct answer when wrong or when "Show All" is clicked
+                    const statusText = showAll ? `<span class="font-bold text-gray-700">Answer:</span>` : `<span class="font-bold text-red-600">Incorrect.</span> The correct answer is:`;
+                    feedbackDiv.innerHTML = `${statusText} <span class="font-mono text-green-700">${item.a}</span>`;
+                    if (item.hint) {
+                         feedbackDiv.innerHTML += `<br> <span class="text-gray-500">Hint: ${item.hint}</span>`;
+                    }
+                }
+
+                if (showAll || userAnswer !== '') {
+                     questionElement.appendChild(feedbackDiv);
+                }
+            });
+
+            // Show results modal only if it's a regular submission
+            if (!showAll) {
+                const totalQuestions = currentQuizData.length;
+                document.getElementById('modal-score').textContent = `${correctCount}/${totalQuestions}`;
+                document.getElementById('modal-title').textContent = correctCount === totalQuestions ? 'Perfect Score!' : 'Quiz Results';
+                document.getElementById('result-modal').classList.add('flex');
+                document.getElementById('result-modal').classList.remove('hidden');
+            }
+
+            // Scroll to the top of the content to see validation
+            document.getElementById('quiz-content').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // --- INITIALIZATION ---
+        window.onload = () => {
+            // Default to Multiple Choice if no quiz is selected
+            loadQuiz('Multiple Choices');
+        };
+
+    </script>
+</body>
+</html>
